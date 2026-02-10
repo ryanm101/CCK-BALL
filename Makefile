@@ -13,8 +13,8 @@ STUDIO_SNIPPET := studio-rpc-usb-uart
 DOCKER_IMAGE := zmkfirmware/zmk-build-arm:stable
 DOCKER_CMD := docker run --rm -w /work -v $(CURDIR):/work $(DOCKER_IMAGE)
 
-.PHONY: all setup init update left right clean help
-.PHONY: docker-all docker-setup docker-left docker-right docker-clean
+.PHONY: all setup init update left right clean help settings-reset
+.PHONY: docker-all docker-setup docker-left docker-right docker-clean docker-settings-reset
 
 # Default target: build both halves
 all: left right
@@ -62,6 +62,15 @@ clean:
 	rm -rf $(BUILD_DIR)
 	@echo "✓ Build directory cleaned"
 
+# Build settings reset firmware (both halves)
+settings-reset:
+	west zephyr-export
+	west build -p always -s zmk/app -b $(BOARD) -- \
+		-DZMK_CONFIG=$(ZMK_CONFIG) \
+		-DSHIELD="settings_reset"
+	cp $(BUILD_DIR)/zephyr/zmk.uf2 $(OUTPUT_DIR)/settings_reset.uf2
+	@echo "✓ Settings reset built: $(OUTPUT_DIR)/settings_reset.uf2"
+
 # ============================================
 # Docker Build Targets
 # ============================================
@@ -86,6 +95,10 @@ docker-right:
 docker-clean:
 	$(DOCKER_CMD) make clean
 
+# Docker: Build settings reset
+docker-settings-reset:
+	$(DOCKER_CMD) make settings-reset
+
 # Help
 help:
 	@echo "CCK-BALL ZMK Firmware Build"
@@ -93,11 +106,12 @@ help:
 	@echo "=== Docker Builds (Recommended) ==="
 	@echo "Usage: make docker-[target]"
 	@echo ""
-	@echo "  docker-all    - Build both halves using Docker"
-	@echo "  docker-setup  - Initialize workspace using Docker"
-	@echo "  docker-left   - Build left half using Docker"
-	@echo "  docker-right  - Build right half using Docker (with ZMK Studio)"
-	@echo "  docker-clean  - Clean build directory using Docker"
+	@echo "  docker-all            - Build both halves using Docker"
+	@echo "  docker-setup          - Initialize workspace using Docker"
+	@echo "  docker-left           - Build left half using Docker"
+	@echo "  docker-right          - Build right half using Docker (with ZMK Studio)"
+	@echo "  docker-settings-reset - Build settings reset using Docker"
+	@echo "  docker-clean          - Clean build directory using Docker"
 	@echo ""
 	@echo "=== Native Builds (requires west installed) ==="
 	@echo "Usage: make [target]"
@@ -108,8 +122,9 @@ help:
 	@echo "  update  - Update west modules"
 	@echo "  export  - Export Zephyr"
 	@echo "  deps    - Install development dependencies"
-	@echo "  left    - Build left half only"
-	@echo "  right   - Build right half only (with ZMK Studio)"
-	@echo "  clean   - Clean build directory"
-	@echo "  help    - Show this help message"
+	@echo "  left            - Build left half only"
+	@echo "  right           - Build right half only (with ZMK Studio)"
+	@echo "  settings-reset  - Build settings reset firmware"
+	@echo "  clean           - Clean build directory"
+	@echo "  help            - Show this help message"
 
